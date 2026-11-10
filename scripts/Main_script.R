@@ -34,11 +34,11 @@ run_periods <- list(
   Run_7_2010_2011 = c(2010, 2011)
 )
 
-# Load each distinct season only once.
 seasons_to_load <- sort(unique(unlist(run_periods)))
 
 boxscores <- load_nba_player_box(seasons = seasons_to_load)
 
+# Filtering for regular season games, where players played non-zero minutes
 boxscores <- boxscores %>%
   filter(
     season_type == 2,
@@ -54,7 +54,7 @@ full_data <- boxscores %>%
   )
 
 # --------------------------------------------------
-# QUANTILE GRID (4 levels -> 64 joint combinations)
+# QUANTILE GRID
 # --------------------------------------------------
 
 grid_quantiles <- c(
@@ -66,7 +66,7 @@ grid_quantiles <- c(
 lv <- names(grid_quantiles)
 
 # --------------------------------------------------
-# LOG LOSS HELPER
+# LOG LOSS HELPER - avoiding 0s and 1s
 # --------------------------------------------------
 
 ll <- function(p, y) {
@@ -228,7 +228,7 @@ run_player_pipeline <- function(player_id, player_name, team_id_val, full_data) 
 }
 
 # --------------------------------------------------
-# RUN PLAYERS WITH FALLBACK
+# RUN PLAYERS WITH A FALLBACK OPTION
 # --------------------------------------------------
 
 run_team_with_fallback <- function(team_candidates, period_data, n_players = 1) {
@@ -366,15 +366,12 @@ run_counts <- all_results %>%
 print(run_counts, n = Inf)
 
 # ==================================================
-# VALIDATION: Gaussian copula vs empirical joint vs independence
+# Validation: Gaussian copula vs empirical joint vs independence
 #
 # - All runs pooled; every observation is one player-game forecast.
-# - All (PTS, REB, AST) quantile combinations are kept separate
-#   (never averaged together).
 # - Observations are not averaged within player first.
 # - Uncertainty comes from a cluster bootstrap over player-runs (one
-#   player sampled in one run), because games from the same player are
-#   not independent.
+#   player sampled in one run).
 #
 # Differences are always (loss of the first) - (loss of the second),
 # so a POSITIVE value means the second method is better:
@@ -408,7 +405,7 @@ n_runs    <- n_distinct(diag_results$run_id)
 combo_vars <- c("pts_level", "reb_level", "ast_level", "combo")
 
 # --------------------------------------------------
-# DIAGNOSTIC: how often does each estimator say "never" or "always"?
+# Diagnostic: how often does each estimator say "never" or "always"?
 # --------------------------------------------------
 
 diag_results %>%
@@ -516,7 +513,7 @@ tests_t %>%
   print(n = Inf, width = Inf)
 
 # --------------------------------------------------
-# SUMMARY: how many of the combinations does each method win?
+# Summary: how many of the combinations does each method win?
 # (a "win" requires the bootstrap CI to exclude 0)
 # --------------------------------------------------
 
@@ -687,7 +684,7 @@ make_rel_plot("Independence")
 make_rel_plot("Empirical joint rate")
 
 # --------------------------------------------------
-# SUMMARY: Average log loss for selected combinations
+# Summary: Average log loss for selected combinations
 # --------------------------------------------------
 
 reference_combos <- c(
@@ -723,7 +720,7 @@ reference_table <- boot_tbl %>%
 print(reference_table, width = Inf)
 
 # ==================================================
-# CALIBRATION CURVES (all three models)
+# Calibration curves (all three models)
 # Equal-count bins per model; CIs from a cluster bootstrap over player-runs.
 # ==================================================
 
@@ -810,7 +807,7 @@ make_calib(
 )
 
 # ==================================================
-# CORRELATION MATRIx: PTS, REB, AST
+# Simple correlation matrix: PTS, REB, AST
 # Uses the raw stat lines of every evaluated player-game.
 # ==================================================
 
