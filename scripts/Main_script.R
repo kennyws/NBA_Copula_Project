@@ -369,7 +369,7 @@ print(run_counts, n = Inf)
 # VALIDATION: Gaussian copula vs empirical joint vs independence
 #
 # - All runs pooled; every observation is one player-game forecast.
-# - All 64 (PTS, REB, AST) quantile combinations are kept separate
+# - All (PTS, REB, AST) quantile combinations are kept separate
 #   (never averaged together).
 # - Observations are not averaged within player first.
 # - Uncertainty comes from a cluster bootstrap over player-runs (one
@@ -429,8 +429,7 @@ diag_results %>%
 
 # --------------------------------------------------
 # TEST 1: paired t-test per combination, for each of the 3 comparisons
-# (Holm across the 64 combinations within each comparison)
-# Caution: treats games as independent, so p-values are optimistic.
+# (Holm across the combinations within each comparison)
 # --------------------------------------------------
 
 comparisons <- tibble::tribble(
@@ -517,7 +516,7 @@ tests_t %>%
   print(n = Inf, width = Inf)
 
 # --------------------------------------------------
-# SUMMARY: how many of the 64 combinations does each method win?
+# SUMMARY: how many of the combinations does each method win?
 # (a "win" requires the bootstrap CI to exclude 0)
 # --------------------------------------------------
 
@@ -687,6 +686,42 @@ make_rel_plot("Independence")
 # Plot B: Gaussian copula vs empirical joint rate
 make_rel_plot("Empirical joint rate")
 
+# --------------------------------------------------
+# SUMMARY: Average log loss for selected combinations
+# --------------------------------------------------
+
+reference_combos <- c(
+  "PTS Q25 | REB Q25 | AST Q25",
+  "PTS Q50 | REB Q50 | AST Q50",
+  "PTS Q75 | REB Q75 | AST Q75"
+)
+
+reference_table <- boot_tbl %>%
+  filter(
+    combo %in% reference_combos,
+    measure %in% c(
+      "log_loss_gaussian",
+      "log_loss_empirical",
+      "log_loss_independent"
+    )
+  ) %>%
+  mutate(
+    model = recode(
+      measure,
+      log_loss_gaussian = "Gaussian",
+      log_loss_empirical = "Empirical",
+      log_loss_independent = "Independence"
+    )
+  ) %>%
+  dplyr::select(combo, model, estimate) %>%
+  tidyr::pivot_wider(
+    names_from = model,
+    values_from = estimate
+  ) %>%
+  arrange(match(combo, reference_combos))
+
+print(reference_table, width = Inf)
+
 # ==================================================
 # CALIBRATION CURVES (all three models)
 # Equal-count bins per model; CIs from a cluster bootstrap over player-runs.
@@ -765,7 +800,7 @@ make_calib <- function(data, title) {
     theme_minimal()
 }
 
-# (a) All 27 combinations pooled
+# (a) All combinations pooled
 make_calib(calib_long, "Calibration of joint threshold forecasts (all combinations)")
 
 # (b) The high-threshold tail, where the models differ most
