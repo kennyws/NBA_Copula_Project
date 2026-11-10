@@ -158,12 +158,12 @@ pooled <- pooled_surface(ast_q = 0.75, baseline = "independent")
 plot_ratio_surface(
   pooled,
   title = paste0("Pooled over ", pooled$n_player_runs,
-                 " player-seasons: Gaussian copula / independence (assists \u2265 Q75)")
+                 " players: Gaussian copula / independence (assists \u2265 Q75)")
 )
 
 pooled <- pooled_surface(ast_q = 0.25, baseline = "independent")
 plot_ratio_surface(
   pooled,
   title = paste0("Pooled over ", pooled$n_player_runs,
-                 " player-seasons: Gaussian copula / independence (assists \u2265 Q25)")
+                 " players: Gaussian copula / independence (assists \u2265 Q25)")
 )
