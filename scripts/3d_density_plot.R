@@ -111,7 +111,6 @@ plot_ratio_surface <- function(m, title = NULL) {
       colorscale = "Viridis",
       colorbar = list(title = "Gaussian /<br>baseline")
     ) %>%
-    # flat reference plane at ratio = 1 (methods agree)
     add_surface(
       x = m$q_seq, y = m$q_seq,
       z = matrix(1, length(m$q_seq), length(m$q_seq)),
@@ -119,10 +118,24 @@ plot_ratio_surface <- function(m, title = NULL) {
       colorscale = list(c(0, "gray"), c(1, "gray"))
     ) %>%
     plotly::layout(
-      title = title,
+      title = list(
+        text = title,
+        y = 0.98,
+        pad = list(b = 20)
+      ),
+      margin = list(t = 100, b = 50, l = 50, r = 50),
       scene = list(
-        xaxis = list(title = "Points quantile level"),
-        yaxis = list(title = "Rebounds quantile level"),
+        aspectratio = list(x = 1, y = 1, z = 1),
+        xaxis = list(
+          title = "Points quantile level",
+          titlefont = list(size = 12),
+          tickfont = list(size = 10)
+        ),
+        yaxis = list(
+          title = "Rebounds quantile level",
+          titlefont = list(size = 12),
+          tickfont = list(size = 10)
+        ),
         zaxis = list(title = "P(Gaussian) / P(baseline)")
       )
     )
@@ -131,7 +144,7 @@ plot_ratio_surface <- function(m, title = NULL) {
 # ---- Pooled surface across every player-run in all_results ----
 # Geometric mean of the per-player ratios (average of the log ratios).
 # Uses a coarser grid and fewer simulations to keep runtime reasonable.
-pooled_surface <- function(ast_q = 0.75,
+pooled_surface <- function(ast_q = ast_q,
                            baseline = "independent",
                            q_seq = seq(0.1, 0.9, by = 0.1),
                            n_sim = 2e4) {
