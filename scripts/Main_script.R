@@ -876,3 +876,33 @@ ggplot(corr_long, aes(a, b, fill = mean)) +
   ) +
   theme_minimal() +
   theme(panel.grid = element_blank())
+
+# Correlation Box Plots
+
+library(tidyverse)
+
+player_cor <- eval_games %>%
+  group_by(cluster_id) %>%
+  filter(n() >= 20) %>%
+  summarise(
+    `PTS vs REB` = suppressWarnings(cor(PTS, REB, method = "spearman")),
+    `PTS vs AST` = suppressWarnings(cor(PTS, AST, method = "spearman")),
+    `REB vs AST` = suppressWarnings(cor(REB, AST, method = "spearman")),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(-cluster_id, names_to = "pair", values_to = "rho")
+
+ggplot(player_cor, aes(x = pair, y = rho)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_boxplot(outlier.shape = NA, fill = "steelblue", alpha = 0.25,
+               color = "steelblue4", width = 0.5) +
+  geom_jitter(width = 0.15, alpha = 0.35, size = 1, color = "grey30") +
+  labs(
+    title = "Within-player correlation of box score statistics",
+    subtitle = "Each point is one player's Spearman correlation of the pairwise relationship",
+    x = NULL, y = "Spearman correlation"
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank(), panel.grid.major.x = element_blank())
+
+
