@@ -132,9 +132,9 @@ run_player_pipeline <- function(player_id, player_name, team_id_val, full_data) 
       colnames(sim_gauss) <- colnames(train_stats)
       
       list(
-        pts = quantile(train$points,   sim_gauss[, "points"],   type = 7),
-        ast = quantile(train$assists,  sim_gauss[, "assists"],  type = 7),
-        reb = quantile(train$rebounds, sim_gauss[, "rebounds"], type = 7),
+        pts = quantile(train$points,   sim_gauss[, "points"],   type = 1, names = FALSE),
+        ast = quantile(train$assists,  sim_gauss[, "assists"],  type = 1, names = FALSE),
+        reb = quantile(train$rebounds, sim_gauss[, "rebounds"], type = 1, names = FALSE),
         ok = TRUE
       )
       
@@ -159,9 +159,9 @@ run_player_pipeline <- function(player_id, player_name, team_id_val, full_data) 
     )
     
     # Thresholds computed once per game, then looked up by level name
-    pts_ths <- quantile(train$points,   grid_quantiles, type = 7, names = FALSE)
-    reb_ths <- quantile(train$rebounds, grid_quantiles, type = 7, names = FALSE)
-    ast_ths <- quantile(train$assists,  grid_quantiles, type = 7, names = FALSE)
+    pts_ths <- quantile(train$points,   grid_quantiles, type = 1, names = FALSE)
+    reb_ths <- quantile(train$rebounds, grid_quantiles, type = 1, names = FALSE)
+    ast_ths <- quantile(train$assists,  grid_quantiles, type = 1, names = FALSE)
     names(pts_ths) <- names(reb_ths) <- names(ast_ths) <- lv
     
     grid <- grid %>%
