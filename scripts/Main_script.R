@@ -58,9 +58,9 @@ full_data <- boxscores %>%
 # --------------------------------------------------
 
 grid_quantiles <- c(
-  Q25 = 0.25,
   Q50 = 0.50,
-  Q75 = 0.75
+  Q75 = 0.75,
+  Q90 = 0.90
 )
 
 lv <- names(grid_quantiles)
@@ -70,7 +70,7 @@ lv <- names(grid_quantiles)
 # --------------------------------------------------
 
 ll <- function(p, y) {
-  p <- pmin(pmax(p, 1e-6), 1 - 1e-6)
+  p <- pmin(pmax(p, 1e-4), 1 - 1e-4)
   -(y * log(p) + (1 - y) * log(1 - p))
 }
 
@@ -185,15 +185,18 @@ run_player_pipeline <- function(player_id, player_name, team_id_val, full_data) 
         grid$pts_th, grid$reb_th, grid$ast_th
       )
     } else {
-      1e-6
+      1e-4
     }
     
-    # 2. Empirical joint probability for each grid row
+    # 2. Empirical joint probability for each grid row (Laplace Smoothed to Prevent 0s)
+    n_train <- nrow(train)
+    
     grid$p_empirical <- mapply(
       function(p, r, a) {
-        mean(train$points >= p &
-               train$rebounds >= r &
-               train$assists >= a)
+        k <- sum(train$points   >= p &
+                   train$rebounds >= r &
+                   train$assists  >= a)
+        (k + 1) / (n_train + 2)
       },
       grid$pts_th, grid$reb_th, grid$ast_th
     )
@@ -656,6 +659,8 @@ make_rel_plot <- function(comp) {
     filter(comparison == comp) %>%
     mutate(sig = lo > 0 | hi < 0)
   
+  tick_size <- if (comp == "Independence") 0.01 else 0.01
+  
   ggplot(d, aes(reorder(combo, estimate), estimate, color = sig)) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
     geom_pointrange(aes(ymin = lo, ymax = hi), size = 0.3) +
@@ -665,7 +670,10 @@ make_rel_plot <- function(comp) {
       labels = c(`TRUE` = "CI excludes 0", `FALSE` = "CI includes 0"),
       name = NULL
     ) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    scale_y_continuous(
+      breaks = seq(-0.05, 0.15, by = tick_size),
+      labels = scales::percent_format(accuracy = 0.1)
+    ) +
     labs(
       title = paste0("Relative log loss improvement of the Gaussian copula over ",
                      tolower(comp)),
@@ -677,10 +685,10 @@ make_rel_plot <- function(comp) {
     theme_minimal()
 }
 
-# Plot A: Gaussian copula vs independence
+# Plot A: Gaussian copula vs independence (1% increments)
 make_rel_plot("Independence")
 
-# Plot B: Gaussian copula vs empirical joint rate
+# Plot B: Gaussian copula vs empirical joint rate (0.5% increments)
 make_rel_plot("Empirical joint rate")
 
 # --------------------------------------------------
@@ -905,4 +913,52 @@ ggplot(player_cor, aes(x = pair, y = rho)) +
   theme_minimal() +
   theme(panel.grid.minor = element_blank(), panel.grid.major.x = element_blank())
 
+
+# Log Loss Bucketed by Number of Games
+
+library(ggplot2)
+
+breaks <- c(0, 40, 80, 100, Inf)
+
+# Independent
+
+diag_plot <- diag_results %>%
+  filter(pts_level == reb_level, reb_level == ast_level,
+         pts_level %in% c("Q25", "Q50", "Q75")) %>%
+  mutate(games_bucket = cut(n_training_games, breaks, right = FALSE)) %>%
+  group_by(pts_level, games_bucket, cluster_id) %>%   # one point = one player in one run
+  summarise(gain = mean(diff_ind_gauss), .groups = "drop")
+
+ggplot(diag_plot, aes(games_bucket, gain)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_boxplot(outlier.shape = NA, fill = "grey90") +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 0.8) +
+  facet_wrap(~ pts_level, nrow = 1,
+             labeller = as_labeller(\(x) paste0("PTS = REB = AST = ", x))) +
+  labs(title = "Gaussian Copula vs Independent Benchmark",
+    x = "Number of training games",
+       y = "Log-loss gain of Gaussian copula\n(independent − Gaussian)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Empirical
+
+diag_plot_emp <- diag_results %>%
+  filter(pts_level == reb_level, reb_level == ast_level,
+         pts_level %in% c("Q25", "Q50", "Q75")) %>%
+  mutate(games_bucket = cut(n_training_games, breaks, right = FALSE)) %>%
+  group_by(pts_level, games_bucket, cluster_id) %>%
+  summarise(gain = mean(diff_emp_gauss), .groups = "drop")
+
+ggplot(diag_plot_emp, aes(games_bucket, gain)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_boxplot(outlier.shape = NA, fill = "grey90") +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 0.8) +
+  facet_wrap(~ pts_level, nrow = 1,
+             labeller = as_labeller(\(x) paste0("PTS = REB = AST = ", x))) +
+  labs(title = "Gaussian Copula vs Empirical Benchmark",
+       x = "Number of training games",
+       y = "Log-loss gain of Gaussian copula\n(empirical − Gaussian)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
